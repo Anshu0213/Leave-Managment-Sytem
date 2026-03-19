@@ -30,9 +30,11 @@ namespace Leave_Managment_Sytem.Services
             if (!userExists)
                 throw new Exception("User not found");
 
-            var hasOverlap = await _context.LeaveRequests.AnyAsync(l =>
-                l.UserId == applyLeave.UserId &&
-                l.Status != "Rejected" &&
+            var existingLeaves = await _context.LeaveRequests
+                .Where(l => l.UserId == applyLeave.UserId && l.Status != "Rejected")
+                .ToListAsync();
+
+            var hasOverlap = existingLeaves.Any(l =>
                 applyLeave.StartDate <= DateTime.Parse(l.EndDate) &&
                 applyLeave.EndDate >= DateTime.Parse(l.StartDate)
             );
