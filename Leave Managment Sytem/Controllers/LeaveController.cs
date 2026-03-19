@@ -9,7 +9,6 @@ namespace Leave_Managment_Sytem.Controllers
     [Route("api/[controller]")]
     public class LeaveController : ControllerBase
     {
-        private readonly ILogger<LeaveController> _logger;
         private readonly ILeaveService _leaveService;
 
 

@@ -2,6 +2,7 @@ using Leave_Managment_Sytem.Models;
 using Leave_Managment_Sytem.Services;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 
 internal class Program
 {
@@ -13,12 +14,15 @@ internal class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
-        builder.Services.AddDbContext<LeaveManagmentContext>();
+        builder.Services.AddDbContext<LeaveManagmentContext>(options =>
+            options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
         builder.Services.AddScoped<ILeaveService, LeaveService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
+        var jwtKey = builder.Configuration["Jwt:Key"];
+
         builder.Services.AddAuthentication("Bearer")
-            .AddJwtBearer("Bearer", static options =>
+            .AddJwtBearer("Bearer", options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
@@ -27,7 +31,7 @@ internal class Program
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
                     IssuerSigningKey = new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes("your-secret-key"))
+                        Encoding.UTF8.GetBytes(jwtKey))
                 };
             });
 
@@ -41,8 +45,10 @@ internal class Program
             app.UseSwaggerUI();
         }
 
+
         app.UseHttpsRedirection();
 
+        app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();

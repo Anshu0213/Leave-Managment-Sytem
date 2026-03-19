@@ -42,6 +42,18 @@ namespace Leave_Managment_Sytem.Services
             await _context.Users.AddAsync(user);
             await _context.SaveChangesAsync();
 
+            // Create default leave balances for the new user
+            var balance = new LeaveBalance
+            {
+                UserId = user.Id,
+                Sick = 12,
+                Casual = 12,
+                Earned = 20
+            };
+
+            await _context.LeaveBalances.AddAsync(balance);
+            await _context.SaveChangesAsync();
+
             return user.Id;
         }
 

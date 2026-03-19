@@ -17,6 +17,9 @@ namespace Leave_Managment_Sytem.Services
             if (applyLeave.StartDate > applyLeave.EndDate)
                 throw new ArgumentException("Start date cannot be after end date");
 
+            if (applyLeave.StartDate.Date < DateTime.UtcNow.Date)
+                throw new ArgumentException("Cannot apply for backdated leave");
+
             var validTypes = new[] { "Sick", "Casual", "Earned" };
             if (!validTypes.Contains(applyLeave.LeaveType))
                 throw new ArgumentException("Invalid leave type");
@@ -36,6 +39,29 @@ namespace Leave_Managment_Sytem.Services
 
             if (hasOverlap)
                 throw new Exception("Leave dates overlap with existing leave");
+
+            // Check leave balance
+            var balance = await _context.LeaveBalances.FirstOrDefaultAsync(b => b.UserId == applyLeave.UserId);
+            if (balance == null)
+                throw new Exception("Leave balance not found for user");
+
+            var days = (applyLeave.EndDate.Date - applyLeave.StartDate.Date).Days + 1;
+
+            switch (applyLeave.LeaveType)
+            {
+                case "Sick":
+                    if (balance.Sick < days)
+                        throw new Exception("Insufficient sick leave balance");
+                    break;
+                case "Casual":
+                    if (balance.Casual < days)
+                        throw new Exception("Insufficient casual leave balance");
+                    break;
+                case "Earned":
+                    if (balance.Earned < days)
+                        throw new Exception("Insufficient earned leave balance");
+                    break;
+            }
 
             var leave = new LeaveRequest
             {
@@ -70,6 +96,39 @@ namespace Leave_Managment_Sytem.Services
                 throw new Exception("Only pending requests can be updated");
 
             leave.Status = updateLeave.Status;
+
+            if (!string.IsNullOrWhiteSpace(updateLeave.Comment))
+            {
+                leave.Reason = (leave.Reason ?? "") + "\nManagerComment: " + updateLeave.Comment;
+            }
+
+            // If approved, deduct balance
+            if (updateLeave.Status == "Approved")
+            {
+                var balance = await _context.LeaveBalances.FirstOrDefaultAsync(b => b.UserId == leave.UserId);
+                if (balance == null)
+                    throw new Exception("Leave balance not found for user");
+
+                var days = (DateTime.Parse(leave.EndDate).Date - DateTime.Parse(leave.StartDate).Date).Days + 1;
+
+                switch (leave.LeaveType)
+                {
+                    case "Sick":
+                        if (balance.Sick < days) throw new Exception("Insufficient sick leave balance");
+                        balance.Sick -= days;
+                        break;
+                    case "Casual":
+                        if (balance.Casual < days) throw new Exception("Insufficient casual leave balance");
+                        balance.Casual -= days;
+                        break;
+                    case "Earned":
+                        if (balance.Earned < days) throw new Exception("Insufficient earned leave balance");
+                        balance.Earned -= days;
+                        break;
+                }
+
+                _context.LeaveBalances.Update(balance);
+            }
 
             _context.LeaveRequests.Update(leave);
 

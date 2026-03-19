@@ -4,5 +4,6 @@
     {
         public int LeaveId { get; set; }
         public string Status { get; set; }
+        public string? Comment { get; set; }
     }
 }
