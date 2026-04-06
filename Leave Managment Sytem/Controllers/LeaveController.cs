@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Leave_Managment_Sytem.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class LeaveController : ControllerBase
@@ -17,7 +18,20 @@ namespace Leave_Managment_Sytem.Controllers
             _leaveService = leaveService;
         }
 
-        [Authorize()]
+        [HttpGet("leaves")]
+        public async Task<IActionResult> GetMyLeaves()
+        {
+            try
+            {
+                var leaves = await _leaveService.GetMyLeavesAsync();
+                return Ok(leaves);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message });
+            }
+        }
+
         [HttpPost("apply")]
         public async Task<IActionResult> ApplyLeave([FromBody] ApplyLeaveRequest request)
         {

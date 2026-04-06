@@ -6,10 +6,12 @@ namespace Leave_Managment_Sytem.Services
     public class LeaveService : ILeaveService
     {
         private readonly LeaveManagmentContext _context;
+        private readonly GetCurrentUserId _GetCurrentUserId;
 
-        public LeaveService(LeaveManagmentContext context)
+        public LeaveService(LeaveManagmentContext context, GetCurrentUserId getCurrentUserId)
         {
             _context = context;
+            _GetCurrentUserId = getCurrentUserId;
         }
 
         public async Task<int> ApplyLeaveAsync(ApplyLeaveRequest applyLeave)
@@ -80,6 +82,24 @@ namespace Leave_Managment_Sytem.Services
             await _context.SaveChangesAsync();
 
             return leave.Id;
+        }
+
+        public Task<List<LeaveResponse>> GetMyLeavesAsync()
+        {
+            var myLeaves = _context.LeaveRequests
+                .Where(l => l.UserId == _GetCurrentUserId.GetUserId())
+                .Select(l => new LeaveResponse
+                {
+                    Id = l.Id,
+                    LeaveType = l.LeaveType,
+                    StartDate = l.StartDate,
+                    EndDate = l.EndDate,
+                    Reason = l.Reason,
+                    Status = l.Status
+                })
+                .ToListAsync();
+
+                return myLeaves;
         }
 
         public async Task UpdateLeaveStatusAsync(UpdateLeaveStatusRequest updateLeave)
